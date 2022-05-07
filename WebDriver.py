@@ -6,40 +6,43 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 import time
+from tqdm import tqdm
+import os
+from pathlib import Path
 
 
 class WebDriver:
-    def __init__(self, channel_videos_url, web_driver_path, options_list=None):
-        self.channel_url = channel_videos_url
-        self._options = self.init_options(options_list)
+    def __init__(self, channel_videos_url, web_driver_path, options_list=None, timeout=10):
+        self.channel_url = Path(channel_videos_url)
+        self.init_options(options_list)
         self._service = Service(executable_path=web_driver_path)
         # only Firefox currently implemented
-        self.driver = webdriver.Firefox(service=self._service, options=self.options)
+        self.driver = webdriver.Firefox(service=self._service, options=self._options)
         self.content_xpath = '//*[@id="contents"]'
-        self.timeout = 10
+        self.timeout = timeout
+        self.videos_xpath = '/html/body/ytd-app/div[1]/ytd-page-manager/ytd-browse/ytd-two-column-browse-results-renderer/div[1]/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/ytd-grid-renderer/div[1]/ytd-grid-video-renderer'
 
     def init_options(self, options_list):
-        self.options = Options()
+        self._options = Options()
         if options_list:
-            self.options.add_argument(*options_list)
+            self._options.add_argument(*options_list)
 
     def open_page(self):
         self.driver.get(self.channel_url)
 
     def ensure_content_loaded(self):
         try:
-            myElem = WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.XPATH, self.content_xpath)))
-            print()
+            myElem = WebDriverWait(self.driver, self.timeout).until(
+                EC.presence_of_element_located((By.XPATH, self.content_xpath)))
+            print("Page is ready")
         except TimeoutException:
-            print
-            "Loading took too much time!"
-
+            print("Loading took too much time! Increase timeout")
 
     def scroll_to_end(self):
-        """Scroll until the end is reached to get all content"""
+        """Scroll until the end is reached to get all content on the one page"""
         self.ensure_content_loaded()
 
-        element = self.driver.find_element_by_xpath(self.content_xpath)  # the element you want to scroll to
+        # element = self.driver.find_element_by_xpath(self.content_xpath)  # the element you want to scroll
         prev_page_pos = 0
         while True:
             self.driver.find_element_by_tag_name('body').send_keys(Keys.END)
@@ -48,3 +51,19 @@ class WebDriver:
                 break
             prev_page_pos = new_page_pos
             time.sleep(1)
+
+    def save_videos_metadata(self):
+        os.path.exists()
+
+
+    def get_all_content(self):
+        video_preview = driver.find_elements_by_xpath(self.videos_xpath)
+        for item in tqdm(video_preview):
+            item = item.find_elements_by_id('video-title')
+            assert len(item) == 1, "links number are not equal to 1 for video"
+            link = item[0].get_attribute('href')
+            self.save_videos_metadata(item.text, link)
+
+    def exit(self):
+        """End session"""
+        self.driver.quit()
