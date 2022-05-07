@@ -35,15 +35,15 @@ def find_pattern_in_files(channel_vidos_url, pattern):
 def main():
     channel_videos_url = "https://www.youtube.com/c/MadHighlights/videos"
     web_driver_path = "./geckodriver"
-    #driver = WebDriver(channel_videos_url, web_driver_path)
-    ## send --headless to prevent browser opening
+    driver = WebDriver(channel_videos_url, web_driver_path)
+    # send --headless to prevent browser opening
 
-    #driver.open_page()
-    #driver.scroll_to_end()
-    #driver.get_all_content()
-    #driver.save_videos_transcripts()
-    #driver.exit() # make it context manager?
-    #del driver
+    driver.open_page()
+    driver.scroll_to_end()
+    driver.get_all_content()
+    driver.save_videos_transcripts()
+    driver.exit() # make it context manager?
+    del driver
 
     pattern = "\s(\w+)?(флан|flan)(\w*)?"
     metadata_path = Path(channel_videos_url).parent.stem
