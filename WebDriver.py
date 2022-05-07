@@ -122,7 +122,7 @@ class WebDriver:
             try:
                 self.download_transcript(row.link, row.file, row.title)
             except TimeoutException as e:
-                print(f"can't get transcript for this video: {e}")
+                print(f"can't get transcript for this video |{row.link}, {row.file}, {row.title} |: {e}")
             time.sleep(random.uniform(1, 5))
 
     def exit(self):
