@@ -53,6 +53,7 @@ class WebDriver:
             self.driver.find_element_by_tag_name('body').send_keys(Keys.END)
             new_page_pos = str(self.driver.execute_script('return window.pageYOffset;'))
             if prev_page_pos == new_page_pos:
+                print('End of page')
                 break
             prev_page_pos = new_page_pos
             time.sleep(1)
@@ -73,6 +74,7 @@ class WebDriver:
         video_preview = self.driver.find_elements_by_xpath(self.videos_xpath)
         videos_dict = {'title':[], 'link':[], 'file':[]}
         regex = re.compile(r"([\d\:]*)?(\n)?(.*)(\n).*(\n).*$") # extact title
+        print('Get all videos metadata...')
         for i, item in tqdm(enumerate(video_preview)):
             link = item.find_elements_by_id('video-title')
             assert len(link) == 1, "links number are not equal to 1 for video"
@@ -102,7 +104,7 @@ class WebDriver:
 
         #all_text = []
         with open(self.foldername+f"/{filename}", 'a+') as f:
-            print(f'go throuh transcript of video: {title}')
+            print(f'go throuh transcript of video and save it | {title}')
             for sent in tqdm(sentences):
                 #all_text.append(x.text.replace('\n','#'))
                 f.write(sent.text.replace('\n','#'))
@@ -110,9 +112,10 @@ class WebDriver:
 
     def save_videos_transcripts(self):
         df = pd.read_csv(self.foldername+"/videos_metadata.csv", sep=';')
-        for i, row in df.iterrows():
+        print('download transcript for each video')
+        for i, row in tqdm(df.iterrows()):
            self.download_transcript(row.link, row.file, row.title)
-           break
+           time.sleep(random.uniform(0, 2))
 
     def exit(self):
         """End session"""

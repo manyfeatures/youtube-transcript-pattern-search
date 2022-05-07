@@ -17,7 +17,7 @@ def find_pattern_in_files(channel_vidos_url, pattern):
     df = pd.read_csv(os.path.join(channel_vidos_url, 'videos_metadata.csv'), sep=';')
     print('Searching pattern in all videos')
     for _, row in tqdm(df.iterrows()):
-        print(f'Scanning video | {row.title} | {row.link}')
+        print('\033[1;36;48m' + f'Scanning video | {row.title} | {row.link}' + '\033[1;37;0m')
         print('\n')
         print('===================================================')
         res = find_pattern(channel_vidos_url, pattern, row.file)
