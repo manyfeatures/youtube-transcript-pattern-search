@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import pandas as pd
 import re
+import numpy as np
 
 
 class WebDriver:
@@ -23,6 +24,7 @@ class WebDriver:
         self.content_xpath = '//*[@id="contents"]'
         self.timeout = timeout
         self.videos_xpath = '/html/body/ytd-app/div[1]/ytd-page-manager/ytd-browse/ytd-two-column-browse-results-renderer/div[1]/ytd-section-list-renderer/div[2]/ytd-item-section-renderer/div[3]/ytd-grid-renderer/div[1]/ytd-grid-video-renderer'
+        self.foldername = self.channel_url.parent.stem
 
     def init_options(self, options_list):
         self._options = Options()
@@ -59,27 +61,55 @@ class WebDriver:
             break
 
     def save_videos_metadata(self, df):
-        name = self.channel_url.parent.stem
-        if not os.path.exists(name):
-            os.mkdir(name)
-        if not os.path.exists(name):
-            df.to_csv(name+"/videos_metadata.csv", sep=';', index=False)
+        if not os.path.exists(self.foldername):
+            os.mkdir(self.foldername)
+        if not os.path.exists(foldername):
+            df.to_csv(self.foldername+"/videos_metadata.csv", sep=';', index=False)
         else:
-            df.to_csv(name+"/videos_metadata.csv", sep=';', index=False, mode='a', header='False')
+            df.to_csv(self.foldername+"/videos_metadata.csv", sep=';', index=False, mode='a', header='False')
 
 
     def get_all_content(self):
         video_preview = self.driver.find_elements_by_xpath(self.videos_xpath)
-        videos_dict = {'title':[], 'link':[]}
+        videos_dict = {'title':[], 'link':[], 'file':[]}
         regex = re.compile(r"([\d\:]*)?(\n)?(.*)(\n).*(\n).*$") # extact title
-        for item in tqdm(video_preview):
+        for i, item in tqdm(enumerate(video_preview)):
             link = item.find_elements_by_id('video-title')
             assert len(link) == 1, "links number are not equal to 1 for video"
             link = link[0].get_attribute('href')
             title = regex.search(item.text).group(3) # or just use all item with views and time
             videos_dict['link'].append(link)
             videos_dict['title'].append(title)
+            videos_dict['file'].append('file'+str(i)+'.txt')
         self.save_videos_metadata(pd.DataFrame(videos_dict))
+
+    def download_transcript(self, url, filename):
+        self.driver.get(url)
+        _1st_button_css = "ytd-menu-renderer.ytd-video-primary-info-renderer > yt-icon-button:nth-child(3) > button:nth-child(1)"
+        button = WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, _1st_button_css)))
+        button.click() #  elipsis (...) button
+        _2nd_button_css = "ytd-menu-service-item-renderer.style-scope:nth-child(2) > tp-yt-paper-item:nth-child(1) > yt-formatted-string:nth-child(2)"
+        button = WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, _2nd_button_css)))
+        button.click() #  `show transcript` buttion
+
+        # get transcript panel
+        css_selector = "html body ytd-app div#content.style-scope.ytd-app ytd-page-manager#page-manager.style-scope.ytd-app ytd-watch-flexy.style-scope.ytd-page-manager.hide-skeleton div#columns.style-scope.ytd-watch-flexy div#secondary.style-scope.ytd-watch-flexy div#secondary-inner.style-scope.ytd-watch-flexy div#panels.style-scope.ytd-watch-flexy ytd-engagement-panel-section-list-renderer.style-scope.ytd-watch-flexy"
+        transcript = self.driver.find_element_by_css_selector(css_selector)
+
+        sentnence_xpath = "//div[contains(@class, 'segment style-scope ytd-transcript-segment-renderer')]"
+        sentences = WebDriverWait(self.driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, sentnence_xpath)))
+
+        #all_text = []
+        with open(self.foldername+f"/{filename}", 'a+') as f:
+            for sent in sentences:
+                #all_text.append(x.text.replace('\n','#'))
+                f.write(f"{sent.text.replace('\n','#')}\n")
+
+    def save_videos_transcripts(self):
+        df = pd.read_csv(self.foldername+"/videos_metadata.csv", sep=';')
+        for i, row in df.iterrows():
+           self.download_transcript(row.link, row.file)
+           break
 
     def exit(self):
         """End session"""

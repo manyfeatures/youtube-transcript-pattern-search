@@ -7,8 +7,9 @@ def main():
     driver = WebDriver(channel_videos_url, web_driver_path)
 
     driver.open_page()
-    driver.scroll_to_end()
-    driver.get_all_content()
+    #driver.scroll_to_end()
+    #driver.get_all_content()
+    driver.save_videos_transcripts()
 
     driver.exit() # make it context manager?
 
