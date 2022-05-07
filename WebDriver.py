@@ -11,8 +11,8 @@ import os
 from pathlib import Path
 import pandas as pd
 import re
-import numpy as np
 import random
+from selenium.common.exceptions import TimeoutException
 
 class WebDriver:
     def __init__(self, channel_videos_url, web_driver_path, options_list=None, timeout=10):
@@ -119,7 +119,10 @@ class WebDriver:
         df = pd.read_csv(self.foldername + "/videos_metadata.csv", sep=';')
         print('download transcript for each video')
         for i, row in tqdm(df.iterrows()):
-            self.download_transcript(row.link, row.file, row.title)
+            try:
+                self.download_transcript(row.link, row.file, row.title)
+            except TimeoutException as e:
+                print(f"can't get transcript for this video: {e}")
             time.sleep(random.uniform(1, 5))
 
     def exit(self):
