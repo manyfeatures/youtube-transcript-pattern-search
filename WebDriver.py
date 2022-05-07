@@ -83,7 +83,8 @@ class WebDriver:
             videos_dict['file'].append('file'+str(i)+'.txt')
         self.save_videos_metadata(pd.DataFrame(videos_dict))
 
-    def download_transcript(self, url, filename):
+    # TODO: split the function to pieces
+    def download_transcript(self, url, filename, title):
         self.driver.get(url)
         _1st_button_css = "ytd-menu-renderer.ytd-video-primary-info-renderer > yt-icon-button:nth-child(3) > button:nth-child(1)"
         button = WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, _1st_button_css)))
@@ -101,14 +102,16 @@ class WebDriver:
 
         #all_text = []
         with open(self.foldername+f"/{filename}", 'a+') as f:
-            for sent in sentences:
+            print(f'go throuh transcript of video: {title}')
+            for sent in tqdm(sentences):
                 #all_text.append(x.text.replace('\n','#'))
-                f.write(f"{sent.text.replace('\n','#')}\n")
+                f.write(sent.text.replace('\n','#'))
+                f.write('\n')
 
     def save_videos_transcripts(self):
         df = pd.read_csv(self.foldername+"/videos_metadata.csv", sep=';')
         for i, row in df.iterrows():
-           self.download_transcript(row.link, row.file)
+           self.download_transcript(row.link, row.file, row.title)
            break
 
     def exit(self):
