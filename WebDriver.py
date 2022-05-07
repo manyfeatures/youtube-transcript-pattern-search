@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 import re
 import numpy as np
-
+import random
 
 class WebDriver:
     def __init__(self, channel_videos_url, web_driver_path, options_list=None, timeout=10):
@@ -46,6 +46,9 @@ class WebDriver:
         """Scroll until the end is reached to get all content on the one page"""
         self.ensure_content_loaded()
 
+        if os.path.exists(self.foldername):
+            return
+
         print('Scrolling...')
         # element = self.driver.find_element_by_xpath(self.content_xpath)  # the element you want to scroll
         prev_page_pos = 0
@@ -58,64 +61,66 @@ class WebDriver:
             prev_page_pos = new_page_pos
             time.sleep(1)
 
-            # DEBUG
-            break
-
     def save_videos_metadata(self, df):
         if not os.path.exists(self.foldername):
             os.mkdir(self.foldername)
-        if not os.path.exists(foldername):
-            df.to_csv(self.foldername+"/videos_metadata.csv", sep=';', index=False)
+        if not os.path.exists(self.foldername):
+            df.to_csv(self.foldername + "/videos_metadata.csv", sep=';', index=False)
         else:
-            df.to_csv(self.foldername+"/videos_metadata.csv", sep=';', index=False, mode='a', header='False')
-
+            df.to_csv(self.foldername + "/videos_metadata.csv", sep=';', index=False, mode='a', header='False')
 
     def get_all_content(self):
+        if os.path.exists(self.foldername):
+            return
         video_preview = self.driver.find_elements_by_xpath(self.videos_xpath)
-        videos_dict = {'title':[], 'link':[], 'file':[]}
-        regex = re.compile(r"([\d\:]*)?(\n)?(.*)(\n).*(\n).*$") # extact title
+        videos_dict = {'title': [], 'link': [], 'file': []}
+        regex = re.compile(r"([\d\:]*)?(\n)?(.*)(\n).*(\n).*$")  # extact title
         print('Get all videos metadata...')
         for i, item in tqdm(enumerate(video_preview)):
             link = item.find_elements_by_id('video-title')
             assert len(link) == 1, "links number are not equal to 1 for video"
             link = link[0].get_attribute('href')
-            title = regex.search(item.text).group(3) # or just use all item with views and time
+            title = regex.search(item.text).group(3)  # or just use all item with views and time
             videos_dict['link'].append(link)
             videos_dict['title'].append(title)
-            videos_dict['file'].append('file'+str(i)+'.txt')
+            videos_dict['file'].append('file' + str(i) + '.txt')
         self.save_videos_metadata(pd.DataFrame(videos_dict))
 
     # TODO: split the function to pieces
     def download_transcript(self, url, filename, title):
+        # pressing button and wait until they appear to get transcript
         self.driver.get(url)
         _1st_button_css = "ytd-menu-renderer.ytd-video-primary-info-renderer > yt-icon-button:nth-child(3) > button:nth-child(1)"
-        button = WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, _1st_button_css)))
-        button.click() #  elipsis (...) button
+        button = WebDriverWait(self.driver, self.timeout).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, _1st_button_css)))
+        button.click()  # elipsis (...) button
         _2nd_button_css = "ytd-menu-service-item-renderer.style-scope:nth-child(2) > tp-yt-paper-item:nth-child(1) > yt-formatted-string:nth-child(2)"
-        button = WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, _2nd_button_css)))
-        button.click() #  `show transcript` buttion
+        button = WebDriverWait(self.driver, self.timeout).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, _2nd_button_css)))
+        button.click()  # `show transcript` buttion
 
         # get transcript panel
         css_selector = "html body ytd-app div#content.style-scope.ytd-app ytd-page-manager#page-manager.style-scope.ytd-app ytd-watch-flexy.style-scope.ytd-page-manager.hide-skeleton div#columns.style-scope.ytd-watch-flexy div#secondary.style-scope.ytd-watch-flexy div#secondary-inner.style-scope.ytd-watch-flexy div#panels.style-scope.ytd-watch-flexy ytd-engagement-panel-section-list-renderer.style-scope.ytd-watch-flexy"
         transcript = self.driver.find_element_by_css_selector(css_selector)
 
         sentnence_xpath = "//div[contains(@class, 'segment style-scope ytd-transcript-segment-renderer')]"
-        sentences = WebDriverWait(self.driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, sentnence_xpath)))
+        sentences = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_all_elements_located((By.XPATH, sentnence_xpath)))
 
-        #all_text = []
-        with open(self.foldername+f"/{filename}", 'a+') as f:
+        # all_text = []
+        with open(self.foldername + f"/{filename}", 'a+') as f:
             print(f'go throuh transcript of video and save it | {title}')
             for sent in tqdm(sentences):
-                #all_text.append(x.text.replace('\n','#'))
-                f.write(sent.text.replace('\n','#'))
+                # all_text.append(x.text.replace('\n','#'))
+                f.write(sent.text.replace('\n', '#'))
                 f.write('\n')
 
     def save_videos_transcripts(self):
-        df = pd.read_csv(self.foldername+"/videos_metadata.csv", sep=';')
+        df = pd.read_csv(self.foldername + "/videos_metadata.csv", sep=';')
         print('download transcript for each video')
         for i, row in tqdm(df.iterrows()):
-           self.download_transcript(row.link, row.file, row.title)
-           time.sleep(random.uniform(0, 2))
+            self.download_transcript(row.link, row.file, row.title)
+            time.sleep(random.uniform(1, 5))
 
     def exit(self):
         """End session"""
