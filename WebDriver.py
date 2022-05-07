@@ -10,6 +10,7 @@ from tqdm import tqdm
 import os
 from pathlib import Path
 import pandas as pd
+import re
 
 
 class WebDriver:
@@ -29,7 +30,7 @@ class WebDriver:
             self._options.add_argument(*options_list)
 
     def open_page(self):
-        self.driver.get(self.channel_url)
+        self.driver.get(self.channel_url.as_posix())
 
     def ensure_content_loaded(self):
         try:
@@ -43,6 +44,7 @@ class WebDriver:
         """Scroll until the end is reached to get all content on the one page"""
         self.ensure_content_loaded()
 
+        print('Scrolling...')
         # element = self.driver.find_element_by_xpath(self.content_xpath)  # the element you want to scroll
         prev_page_pos = 0
         while True:
@@ -52,6 +54,9 @@ class WebDriver:
                 break
             prev_page_pos = new_page_pos
             time.sleep(1)
+
+            # DEBUG
+            break
 
     def save_videos_metadata(self, df):
         name = self.channel_url.parent.stem
@@ -64,13 +69,14 @@ class WebDriver:
 
 
     def get_all_content(self):
-        video_preview = driver.find_elements_by_xpath(self.videos_xpath)
+        video_preview = self.driver.find_elements_by_xpath(self.videos_xpath)
         videos_dict = {'title':[], 'link':[]}
+        regex = re.compile(r"([\d\:]*)?(\n)?(.*)(\n).*(\n).*$") # extact title
         for item in tqdm(video_preview):
-            item = item.find_elements_by_id('video-title')
-            assert len(item) == 1, "links number are not equal to 1 for video"
-            link = item[0].get_attribute('href')
-            title = item.text.split('\n')[1]
+            link = item.find_elements_by_id('video-title')
+            assert len(link) == 1, "links number are not equal to 1 for video"
+            link = link[0].get_attribute('href')
+            title = regex.search(item.text).group(3) # or just use all item with views and time
             videos_dict['link'].append(link)
             videos_dict['title'].append(title)
         self.save_videos_metadata(pd.DataFrame(videos_dict))
