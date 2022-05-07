@@ -8,6 +8,7 @@ def main():
 
     driver.open_page()
     driver.scroll_to_end()
+    driver.get_all_content()
 
     driver.exit() # make it context manager?
 

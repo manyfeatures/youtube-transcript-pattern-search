@@ -9,6 +9,7 @@ import time
 from tqdm import tqdm
 import os
 from pathlib import Path
+import pandas as pd
 
 
 class WebDriver:
@@ -52,17 +53,27 @@ class WebDriver:
             prev_page_pos = new_page_pos
             time.sleep(1)
 
-    def save_videos_metadata(self):
-        os.path.exists()
+    def save_videos_metadata(self, df):
+        name = self.channel_url.parent.stem
+        if not os.path.exists(name):
+            os.mkdir(name)
+        if not os.path.exists(name):
+            df.to_csv(name+"/videos_metadata.csv", sep=';', index=False)
+        else:
+            df.to_csv(name+"/videos_metadata.csv", sep=';', index=False, mode='a', header='False')
 
 
     def get_all_content(self):
         video_preview = driver.find_elements_by_xpath(self.videos_xpath)
+        videos_dict = {'title':[], 'link':[]}
         for item in tqdm(video_preview):
             item = item.find_elements_by_id('video-title')
             assert len(item) == 1, "links number are not equal to 1 for video"
             link = item[0].get_attribute('href')
-            self.save_videos_metadata(item.text, link)
+            title = item.text.split('\n')[1]
+            videos_dict['link'].append(link)
+            videos_dict['title'].append(title)
+        self.save_videos_metadata(pd.DataFrame(videos_dict))
 
     def exit(self):
         """End session"""
