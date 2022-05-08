@@ -115,14 +115,17 @@ class WebDriver:
                 f.write(sent.text.replace('\n', '#'))
                 f.write('\n')
 
-    def save_videos_transcripts(self):
-        df = pd.read_csv(self.foldername + "/videos_metadata.csv", sep=';')
+    def save_videos_transcripts(self, skip_rows_num=0):
+        df = pd.read_csv(self.foldername + "/videos_metadata.csv", sep=';', skiprows=range(1, skip_rows_num))
         print('download transcript for each video')
         for i, row in tqdm(df.iterrows()):
+            print("file:", row.file)
             try:
                 self.download_transcript(row.link, row.file, row.title)
             except TimeoutException as e:
                 print(f"can't get transcript for this video |{row.link}, {row.file}, {row.title} |: {e}")
+            except Exception as e:
+                print("Exception:", e)
             time.sleep(random.uniform(1, 5))
 
     def exit(self):
